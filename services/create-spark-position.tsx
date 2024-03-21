@@ -1,28 +1,9 @@
-'use client'
 import { createWalletClient, encodeFunctionData, erc20Abi, http } from 'viem'
+import { sparkAddressesMap } from '@/addresses/spark-addresses-map'
 import { aavePoolABI, dsProxyAbi } from '@/abis'
-import { ActionResults, PositionOwnerType, SupportedChain } from '@/types'
-import { aaveAddressesMap } from '@/addresses/aave-addresses-map'
+import { CreateAaveV3PositionArgs } from '@/services/create-aave-v3-position'
 
-export interface CreateAaveV3PositionArgs {
-  tenderlyUrl: string
-  walletAddress: string
-  positionOwner: string
-  positionOwnerType: PositionOwnerType
-  collateral: { address: string; decimals: number }
-  debt: { address: string; decimals: number }
-  chain: SupportedChain
-}
-
-export interface CreateSparkPositionArgs {
-  tenderlyUrl: string
-  walletAddress: string
-  collateral: string
-  debt: string
-  chain: SupportedChain
-}
-
-export const createAaveV3Position = async ({
+export const createSparkPosition = async ({
   tenderlyUrl,
   positionOwner,
   walletAddress,
@@ -30,15 +11,16 @@ export const createAaveV3Position = async ({
   debt,
   chain,
   positionOwnerType,
-}: CreateAaveV3PositionArgs): Promise<ActionResults> => {
-  const results: [string, `0x${string}`][] = []
+}: CreateAaveV3PositionArgs) => {
   const client = createWalletClient({
     chain: chain,
     transport: http(tenderlyUrl),
     account: walletAddress as `0x${string}`,
   })
 
-  const addresses = aaveAddressesMap[chain.id]
+  const results: [string, `0x${string}`][] = []
+
+  const addresses = sparkAddressesMap[chain.id]
 
   // params": [
   //     "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", - TOKEN_ADDRESS
@@ -57,7 +39,7 @@ export const createAaveV3Position = async ({
     abi: erc20Abi,
     address: collateral.address as `0x${string}`,
     functionName: 'approve',
-    args: [addresses.AavePool, amount],
+    args: [addresses.SparkPool, amount],
     account: walletAddress as `0x${string}`,
   })
 
@@ -65,7 +47,7 @@ export const createAaveV3Position = async ({
 
   const depositTxHash = await client.writeContract({
     abi: aavePoolABI,
-    address: addresses.AavePool,
+    address: addresses.SparkPool,
     functionName: 'deposit',
     args: [collateral.address as `0x${string}`, amount, positionOwner as `0x${string}`, 0],
     account: walletAddress as `0x${string}`,
@@ -92,7 +74,7 @@ export const createAaveV3Position = async ({
       abi: dsProxyAbi,
       address: positionOwner as `0x${string}`,
       functionName: 'execute',
-      args: [addresses.AavePool, encodedBorrowFunction],
+      args: [addresses.SparkPool, encodedBorrowFunction],
     })
 
     results.push([`Borrow Tokens`, dsProxyBorrowTxHash])
@@ -109,7 +91,7 @@ export const createAaveV3Position = async ({
   if (positionOwnerType === 'EOA') {
     const borrowTxHash = await client.writeContract({
       abi: aavePoolABI,
-      address: addresses.AavePool,
+      address: addresses.SparkPool,
       functionName: 'borrow',
       args: [debt.address as `0x${string}`, borrowAmount, 2n, 0, walletAddress as `0x${string}`],
       account: walletAddress as `0x${string}`,

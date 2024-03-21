@@ -1,2 +1,5 @@
 export * from './transfer-proxy'
 export * from './create-aave-v3-position'
+export * from './service-registry-helpers'
+export * from './create-spark-position'
+export * from './create-ds-proxy'
