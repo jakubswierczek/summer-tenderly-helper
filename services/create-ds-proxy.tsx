@@ -1,6 +1,6 @@
 'use client'
 import { createPublicClient, createWalletClient, getContract, http } from 'viem'
-import { dsProxyFactoryAbi } from '@/abis'
+import { dsProxyRegistryAbi } from '@/abis'
 import { SupportedChain } from '@/types/supported-chain'
 import { DsproxyAddreses } from '@/addresses/dsproxy-addreses'
 
@@ -21,15 +21,9 @@ export const createDsProxy = async (tenderlyFork: string, owner: string, chain: 
     transport: http(tenderlyFork),
   })
 
-  const dsProxyFactory = getContract({
-    abi: dsProxyFactoryAbi,
-    address: dsProxyAddresses.Factory,
-    client,
-  })
-
   const { request, result } = await publicClient.simulateContract({
-    address: dsProxyAddresses.Factory,
-    abi: dsProxyFactoryAbi,
+    address: dsProxyAddresses.ProxyRegistry,
+    abi: dsProxyRegistryAbi,
     functionName: 'build',
   })
 
@@ -38,17 +32,6 @@ export const createDsProxy = async (tenderlyFork: string, owner: string, chain: 
     args: undefined,
     account: owner as `0x${string}`,
   })
-
-  const createdProxyHash = await client.writeContract({
-    address: dsProxyAddresses.Factory,
-    abi: dsProxyFactoryAbi,
-    functionName: 'build',
-    account: owner as `0x${string}`,
-  })
-
-  // const receipeint = await publicClient.waitForTransactionReceipt({ hash: createdProxyHash })
-  //
-  // receipeint.
 
   return result
 }
