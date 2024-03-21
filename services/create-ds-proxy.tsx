@@ -25,6 +25,7 @@ export const createDsProxy = async (tenderlyFork: string, owner: string, chain: 
     address: dsProxyAddresses.ProxyRegistry,
     abi: dsProxyRegistryAbi,
     functionName: 'build',
+    account: owner as `0x${string}`,
   })
 
   await client.writeContract({
