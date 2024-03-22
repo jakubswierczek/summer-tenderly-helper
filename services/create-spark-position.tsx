@@ -2,6 +2,19 @@ import { createWalletClient, encodeFunctionData, erc20Abi, http } from 'viem'
 import { sparkAddressesMap } from '@/addresses/spark-addresses-map'
 import { aavePoolABI, dsProxyAbi } from '@/abis'
 import { CreateAaveV3PositionArgs } from '@/services/create-aave-v3-position'
+import { PositionOwnerType, SupportedChain } from '@/types'
+import { aaveProxyActionAbi } from '@/abis/aave-proxy-action-abi'
+import { sparkProxyActionAbi } from '@/abis/spark-proxy-action-abi'
+
+export interface CreateSparkPositionArgs {
+  tenderlyUrl: string
+  walletAddress: string
+  positionOwner: string
+  positionOwnerType: PositionOwnerType
+  collateral: { address: string; decimals: number }
+  debt: { address: string; decimals: number }
+  chain: SupportedChain
+}
 
 export const createSparkPosition = async ({
   tenderlyUrl,
@@ -11,7 +24,7 @@ export const createSparkPosition = async ({
   debt,
   chain,
   positionOwnerType,
-}: CreateAaveV3PositionArgs) => {
+}: CreateSparkPositionArgs) => {
   const client = createWalletClient({
     chain: chain,
     transport: http(tenderlyUrl),
@@ -58,35 +71,25 @@ export const createSparkPosition = async ({
   const borrowAmount = BigInt(50) * BigInt(10 ** debt.decimals)
 
   if (positionOwnerType === 'DS_PROXY') {
-    const encodedBorrowFunction = encodeFunctionData({
-      abi: aavePoolABI,
-      functionName: 'borrow',
-      args: [debt.address as `0x${string}`, borrowAmount, 2n, 0, positionOwner as `0x${string}`],
-    })
+    if (addresses.ProxyAction === '0x0000000000000000000000000000000000000000') {
+      results.push([`Proxy Action Not Set`, '0x0'])
+      results.push([`Cannot create a position on DsProxy on ${chain.id}`, '0x0'])
+    } else {
+      const encodedBorrowFunction = encodeFunctionData({
+        abi: sparkProxyActionAbi,
+        functionName: 'drawDebt',
+        args: [debt.address as `0x${string}`, walletAddress as `0x${string}`, borrowAmount],
+      })
 
-    const encodedTransferBorrowedToken = encodeFunctionData({
-      abi: erc20Abi,
-      functionName: 'transfer',
-      args: [walletAddress as `0x${string}`, borrowAmount],
-    })
+      const dsProxyBorrowTxHash = await client.writeContract({
+        abi: dsProxyAbi,
+        address: positionOwner as `0x${string}`,
+        functionName: 'execute',
+        args: [addresses.ProxyAction, encodedBorrowFunction],
+      })
 
-    const dsProxyBorrowTxHash = await client.writeContract({
-      abi: dsProxyAbi,
-      address: positionOwner as `0x${string}`,
-      functionName: 'execute',
-      args: [addresses.SparkPool, encodedBorrowFunction],
-    })
-
-    results.push([`Borrow Tokens`, dsProxyBorrowTxHash])
-
-    const dsProxyTransferTxHash = await client.writeContract({
-      abi: dsProxyAbi,
-      address: positionOwner as `0x${string}`,
-      functionName: 'execute',
-      args: [debt.address as `0x${string}`, encodedTransferBorrowedToken],
-    })
-
-    results.push([`Transfer Tokens To Wallet`, dsProxyTransferTxHash])
+      results.push([`Borrow Tokens`, dsProxyBorrowTxHash])
+    }
   }
   if (positionOwnerType === 'EOA') {
     const borrowTxHash = await client.writeContract({
