@@ -41,7 +41,7 @@ export const createSparkPosition = async ({
   //     "0xDE0B6B3A7640000" - Amount in WEI
   //   ],
 
-  const amount = BigInt(50) * BigInt(10 ** collateral.decimals)
+  const amount = BigInt(40) * BigInt(10 ** collateral.decimals)
 
   const params = [collateral.address, walletAddress, `0x${amount.toString(16)}`]
 
