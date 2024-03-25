@@ -68,7 +68,7 @@ export const createSparkPosition = async ({
 
   results.push([`Deposit Tokens`, depositTxHash])
 
-  const borrowAmount = BigInt(50) * BigInt(10 ** debt.decimals)
+  const borrowAmount = BigInt(40) * BigInt(10 ** debt.decimals)
 
   if (positionOwnerType === 'DS_PROXY') {
     if (addresses.ProxyAction === '0x0000000000000000000000000000000000000000') {
